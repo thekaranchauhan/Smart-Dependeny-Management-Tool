@@ -12,11 +12,19 @@ const app = express();
 
 // Define the GraphQL schema
 const schema = buildSchema(`
+  type Vulnerability {
+    id: String
+    title: String
+    severity: String
+    path: [String]
+    from: [String]
+  }
+
   type Dependency {
     name: String
     version: String
     isDeprecated: Boolean
-    isVulnerable: Boolean
+    vulnerabilities: [Vulnerability]
   }
 
   type Query {
@@ -36,10 +44,18 @@ const checkVulnerabilities = () => {
 
       // Parse the audit result JSON
       const auditResult = JSON.parse(stdout);
-      const vulnerabilities = auditResult.metadata.vulnerabilities;
+      const vulnerabilities = auditResult.advisories || {};
 
-      // Resolve with a list of vulnerabilities present
-      resolve(Object.keys(vulnerabilities).filter((level) => vulnerabilities[level].length > 0));
+      // Extract details of vulnerabilities
+      const vulnerabilityDetails = Object.values(vulnerabilities).map((vuln) => ({
+        id: vuln.id,
+        title: vuln.title,
+        severity: vuln.severity,
+        path: vuln.findings.map((finding) => finding.path),
+        from: vuln.findings.map((finding) => finding.version),
+      }));
+
+      resolve(vulnerabilityDetails); // Resolve with the vulnerability details
     });
   });
 };
@@ -65,10 +81,14 @@ const root = {
     for (const [name, version] of Object.entries(packageJson.dependencies || {})) {
       const pkg = dependenciesInfo[name]; // Get the package info from npm-check
       const isDeprecated = pkg ? pkg.isDeprecated : false; // Check if the package is deprecated
-      const isVulnerable = vulnerabilities.includes(name); // Check if the package is vulnerable
+
+      // Filter vulnerabilities for the specific package
+      const packageVulnerabilities = vulnerabilities.filter(vuln => 
+        vuln.path.some(p => p.includes(name)) // Check if the package is listed in the path
+      );
 
       // Push the formatted dependency data into the array
-      dependencies.push({ name, version, isDeprecated, isVulnerable });
+      dependencies.push({ name, version, isDeprecated, vulnerabilities: packageVulnerabilities });
     }
 
     return dependencies; // Return the array of dependencies
