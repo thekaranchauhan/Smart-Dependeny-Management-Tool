@@ -1,19 +1,13 @@
 import React from 'react';
-
-interface Dependency {
-  name: string;
-  version: string;
-  isDeprecated: boolean;
-  isVulnerable: boolean;
-}
+import { Dependency } from '../types';
 
 interface DependencyListProps {
   dependencies: Dependency[];
 }
 
-export default function DependencyList ({ dependencies }) {
+export default function DependencyList({ dependencies }: DependencyListProps) {
   return (
-    <div className="w-full max-w-4xl mx-auto mt-4">
+    <div className="w-full max-w-4xl mx-auto mt-4 overflow-x-auto">
       <table className="min-w-full border-collapse border border-gray-300">
         <thead>
           <tr>
@@ -29,12 +23,11 @@ export default function DependencyList ({ dependencies }) {
               <td className="border border-gray-300 p-2">{dependency.name}</td>
               <td className="border border-gray-300 p-2">{dependency.version}</td>
               <td className="border border-gray-300 p-2">{dependency.isDeprecated ? 'Yes' : 'No'}</td>
-              <td className="border border-gray-300 p-2">{dependency.isVulnerable ? 'Yes' : 'No'}</td>
+              <td className="border border-gray-300 p-2">{dependency.vulnerabilities.length > 0 ? 'Yes' : 'No'}</td>
             </tr>
           ))}
         </tbody>
       </table>
     </div>
   );
-};
-
+}

@@ -6,9 +6,13 @@ const fs = require('fs');
 const path = require('path');
 const npmCheck = require('npm-check');
 const { exec } = require('child_process');
+const cors = require('cors');
 
 // Initialize an Express application
 const app = express();
+
+// Enable CORS for the server
+app.use(cors());
 
 // Define the GraphQL schema
 const schema = buildSchema(`
