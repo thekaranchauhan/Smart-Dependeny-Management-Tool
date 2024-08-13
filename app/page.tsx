@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import DependencyList from './components/DependencyList';
 import Spinner from './components/Spinner';
 import Navbar from './components/Navbar';
+import UpdateButton from './components/UpdateButton';
 import { Dependency } from './types';
 
 export default function Home() {
@@ -59,7 +60,10 @@ export default function Home() {
         ) : error ? (
           <div className="text-red-500">{error}</div>
         ) : (
-          <DependencyList dependencies={dependencies} />
+          <>
+            <DependencyList dependencies={dependencies} />
+            <UpdateButton />
+          </>
         )}
       </main>
     </div>

@@ -1,4 +1,3 @@
-// Import necessary modules
 const express = require('express');
 const { graphqlHTTP } = require('express-graphql');
 const { buildSchema } = require('graphql');
@@ -34,6 +33,10 @@ const schema = buildSchema(`
   type Query {
     dependencies: [Dependency]
   }
+
+  type Mutation {
+    updateDependencies(confirm: Boolean!): String
+  }
 `);
 
 // Function to check for vulnerabilities using npm audit
@@ -64,9 +67,40 @@ const checkVulnerabilities = () => {
   });
 };
 
-// Root resolver for GraphQL queries
+// Function to check if dependencies are up-to-date
+const areDependenciesUpToDate = async () => {
+  const currentPackage = await npmCheck({ cwd: __dirname });
+  const outdatedPackages = currentPackage.get('packages').filter(pkg => pkg.bump !== null);
+  return outdatedPackages.length === 0;
+};
+
+// Function to update dependencies
+const updateDependencies = async (confirm) => {
+  if (!confirm) {
+    return 'Update canceled by user.';
+  }
+
+  const upToDate = await areDependenciesUpToDate();
+  if (upToDate) {
+    return 'Dependencies are already up-to-date.';
+  }
+
+  return new Promise((resolve, reject) => {
+    exec('npm update', (error, stdout, stderr) => {
+      if (error) {
+        console.error('Error updating dependencies:', stderr);
+        reject('Failed to update dependencies.');
+        return;
+      }
+
+      console.log('Dependencies updated successfully:', stdout);
+      resolve('Dependencies updated successfully.');
+    });
+  });
+};
+
+// Root resolver for GraphQL queries and mutations
 const root = {
-  // Resolver to fetch dependencies information
   dependencies: async () => {
     // Read the package.json file to access dependencies
     const packageJsonPath = path.join(__dirname, 'package.json');
@@ -87,7 +121,7 @@ const root = {
       const isDeprecated = pkg ? pkg.isDeprecated : false; // Check if the package is deprecated
 
       // Filter vulnerabilities for the specific package
-      const packageVulnerabilities = vulnerabilities.filter(vuln => 
+      const packageVulnerabilities = vulnerabilities.filter(vuln =>
         vuln.path.some(p => p.includes(name)) // Check if the package is listed in the path
       );
 
@@ -96,6 +130,9 @@ const root = {
     }
 
     return dependencies; // Return the array of dependencies
+  },
+  updateDependencies: async ({ confirm }) => {
+    return await updateDependencies(confirm);
   },
 };
 
